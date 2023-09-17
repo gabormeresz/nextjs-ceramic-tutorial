@@ -1,95 +1,81 @@
-import Image from 'next/image'
-import styles from './page.module.css'
+"use client";
+
+import styles from "./page.module.css";
+import { Web3Provider } from "@ethersproject/providers";
+import { useEffect, useRef } from "react";
+import Web3Modal from "web3modal";
+import { useViewerConnection } from "@self.id/react";
+import { EthereumAuthProvider } from "@self.id/web";
+import RecordSetter from "./components/RecordSetter";
 
 export default function Home() {
+  const [connection, connect, disconnect] = useViewerConnection();
+
+  const web3ModalRef = useRef();
+
+  const getProvider = async () => {
+    const provider = await web3ModalRef.current.connect();
+    const wrappedProvider = new Web3Provider(provider);
+    return wrappedProvider;
+  };
+
+  const connectToSelfID = async () => {
+    const ethereumAuthProvider = await getEthereumAuthProvider();
+    connect(ethereumAuthProvider);
+  };
+
+  const getEthereumAuthProvider = async () => {
+    const wrappedProvider = await getProvider();
+    const signer = wrappedProvider.getSigner();
+    const address = await signer.getAddress();
+    return new EthereumAuthProvider(wrappedProvider.provider, address);
+  };
+
+  useEffect(() => {
+    if (connection.status !== "connected") {
+      web3ModalRef.current = new Web3Modal({
+        network: "goerli",
+        providerOptions: {},
+        disableInjectedProvider: false,
+      });
+    }
+  }, [connection.status]);
+
   return (
     <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.js</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+      <div className={styles.main}>
+        <div className={styles.navbar}>
+          <span className={styles.title}>Ceramic Demo</span>
+          {connection.status === "connected" ? (
+            <span className={styles.subtitle}>Connected</span>
+          ) : (
+            <button
+              onClick={connectToSelfID}
+              className={styles.button}
+              disabled={connection.status === "connecting"}
+            >
+              Connect
+            </button>
+          )}
+        </div>
+
+        <div className={styles.content}>
+          <div className={styles.connection}>
+            {connection.status === "connected" ? (
+              <div>
+                <span className={styles.subtitle}>
+                  Your 3ID is {connection.selfID.id}
+                </span>
+                <RecordSetter />
+              </div>
+            ) : (
+              <span className={styles.subtitle}>
+                Connect with your wallet to access your 3ID
+              </span>
+            )}
+          </div>
         </div>
       </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore the Next.js 13 playground.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
     </main>
-  )
+  );
 }
